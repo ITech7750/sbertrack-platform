@@ -26,3 +26,7 @@ sbertrack:
   openapi:
     title: "СберТрек Платформа API"
     version: "0.1.0"
+  mistral:
+    api-key: cP34NpjA6jNayh6roCbUvRLYKEdTwi9o
+    base-url: ${MISTRAL_BASE_URL:https://api.mistral.ai/v1}
+    model: ${MISTRAL_MODEL:mistral-small-latest}
