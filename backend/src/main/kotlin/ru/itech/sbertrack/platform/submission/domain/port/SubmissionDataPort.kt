@@ -4,6 +4,7 @@ import ru.itech.sbertrack.platform.submission.domain.model.Submission
 import java.util.UUID
 
 interface SubmissionDataPort {
+    fun findForAgentContext(studentId: UUID, caseId: UUID): List<Submission>
     fun list(): List<Submission>
     fun findById(id: UUID): Submission?
     fun save(submission: Submission): Submission

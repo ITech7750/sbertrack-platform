@@ -39,8 +39,10 @@ class AgentController(
         agentService.createSession(request, authorization)
 
     @GetMapping("/sessions/{id}")
-    fun getSession(@PathVariable id: UUID): AgentSessionResponse =
-        agentService.getSession(id)
+    fun getSession(
+        @PathVariable id: UUID,
+        @RequestHeader("Authorization", required = false) authorization: String?,
+    ): AgentSessionResponse = agentService.getSession(id, authorization)
 
     @GetMapping("/sessions/latest")
     fun getLatestSession(
@@ -51,6 +53,9 @@ class AgentController(
         agentService.findLatestSession(agentId, caseId, authorization)
 
     @PostMapping("/sessions/{id}/messages")
-    fun sendMessage(@PathVariable id: UUID, @Valid @RequestBody request: AgentMessageRequest): AgentSessionResponse =
-        agentService.sendMessage(id, request)
+    fun sendMessage(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: AgentMessageRequest,
+        @RequestHeader("Authorization", required = false) authorization: String?,
+    ): AgentSessionResponse = agentService.sendMessage(id, request, authorization)
 }

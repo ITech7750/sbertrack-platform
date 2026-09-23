@@ -24,4 +24,6 @@ class AgentMessageEntity(
     val content: String,
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant,
+    @Column(name = "sequence_number", nullable = false)
+    val sequenceNumber: Long,
 )

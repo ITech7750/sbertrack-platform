@@ -10,6 +10,9 @@ class SubmissionJpaAdapter(
     private val repository: SubmissionJpaRepository,
     private val mapper: SubmissionEntityMapper,
 ) : SubmissionDataPort {
+    override fun findForAgentContext(studentId: UUID, caseId: UUID): List<Submission> =
+        repository.findTop5ByStudentIdAndCaseIdOrderByContentUpdatedAtDescIdAsc(studentId, caseId).map(mapper::toDomain)
+
     override fun list(): List<Submission> =
         repository.findAll().map(mapper::toDomain)
 

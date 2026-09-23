@@ -43,4 +43,6 @@ class SubmissionEntity(
     val reflectionId: UUID?,
     @Column(name = "submitted_at")
     val submittedAt: Instant?,
+    @Column(name = "content_updated_at", nullable = false)
+    val contentUpdatedAt: Instant,
 )
