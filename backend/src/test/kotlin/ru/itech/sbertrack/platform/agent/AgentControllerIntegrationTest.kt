@@ -126,6 +126,8 @@ class AgentControllerIntegrationTest {
         try {
             agents.saveAgent(agent.copy(status = AgentStatus.DISABLED))
             send(id, token).andExpect(status().isForbidden)
+            mvc.perform(get("/api/v1/agents/sessions/latest").header("Authorization", token).param("agentId", agent.id.toString()))
+                .andExpect(status().isForbidden)
             mvc.perform(post("/api/v1/agents/sessions").header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
                 .content("""{"agentId":"${agent.id}"}""")).andExpect(status().isForbidden)
             verifyNoInteractions(gateway)

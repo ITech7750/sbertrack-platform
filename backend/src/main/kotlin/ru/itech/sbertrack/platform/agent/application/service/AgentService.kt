@@ -44,6 +44,7 @@ class AgentService(
 
     fun findLatestSession(agentId: UUID, caseId: UUID?, authorization: String?): AgentSessionResponse? {
         val studentId = currentStudent(authorization)
+        activeAgent(agentId)
         return agentDataPort.findLatestSession(studentId, agentId, caseId)?.let(agentMapper::toResponse)
     }
 
