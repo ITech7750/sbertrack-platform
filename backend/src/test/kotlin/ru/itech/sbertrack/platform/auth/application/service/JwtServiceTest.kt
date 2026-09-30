@@ -34,7 +34,11 @@ class JwtServiceTest {
     @Test
     fun `tampered token is rejected`() {
         val token = jwtService.issue(UUID.randomUUID())
-        val tampered = token.dropLast(1) + if (token.last() == 'A') 'B' else 'A'
+        // The final Base64URL character may only change unused padding bits.
+        // Changing the first signature character always changes signed bytes.
+        val signatureStart = token.lastIndexOf('.') + 1
+        val replacement = if (token[signatureStart] == 'A') 'B' else 'A'
+        val tampered = token.replaceRange(signatureStart, signatureStart + 1, replacement.toString())
 
         assertFailsWith<UnauthorizedException> { jwtService.parseUserId(tampered) }
     }

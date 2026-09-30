@@ -63,6 +63,7 @@ import AttachFileRoundedIcon from '@mui/icons-material/AttachFileRounded';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, platformApi, post, put } from '../api/client';
+import { useAgentSession } from '../hooks/useAgentSession';
 import { useAuth } from '../auth/AuthProvider';
 import {
   BarChartBlock,
@@ -580,9 +581,9 @@ export function StudentWorkspacePage() {
   const [selectedArtifacts, setSelectedArtifacts] = useState<string[]>(['Описание решения']);
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [message, setMessage] = useState('');
-  const [agentSession, setAgentSession] = useState<AgentSession | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [pendingMessage, setPendingMessage] = useState('');
+  const [chatError, setChatError] = useState<string | null>(null);
 
   async function handleArtifactUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -609,10 +610,11 @@ export function StudentWorkspacePage() {
   }, [caseId]);
   const mentor = data?.agents[0];
 
+  const chat = useAgentSession(mentor?.id, caseId, session?.user.id);
   useEffect(() => {
-    if (!mentor) return;
-    setAgentSession(null);
-    platformApi.agents.latestSession(mentor.id, caseId).then(setAgentSession).catch(() => setAgentSession(null));
+    setChatError(null);
+    setSendingMessage(false);
+    setPendingMessage('');
   }, [mentor?.id, caseId]);
 
   async function ensureSubmission(): Promise<Submission> {
@@ -653,26 +655,37 @@ export function StudentWorkspacePage() {
   }
 
   async function sendAgentMessage() {
-    if (!message.trim() || !mentor || !data || sendingMessage) return;
+    if (!message.trim() || !mentor || !data || sendingMessage || !chat.ready) return;
     const content = message;
     setMessage('');
     setPendingMessage(content);
     setSendingMessage(true);
+    setChatError(null);
     try {
-      const currentSession = agentSession ?? await post<AgentSession>('/agents/sessions', {
+      const currentSession = chat.session ?? await post<AgentSession>('/agents/sessions', {
         studentId: session?.user.id,
         caseId,
         agentId: mentor.id
       });
+      if (!chat.isCurrent()) return;
+      chat.setSession(currentSession);
       const artifacts = artifactUrl ? [...selectedArtifacts, artifactUrl] : selectedArtifacts;
       const nextSession = await platformApi.agents.sendMessage(currentSession.id, {
         content,
         caseTitle: data.item.title,
         artifacts
       });
-      setAgentSession(nextSession);
+      if (!chat.isCurrent()) return;
+      chat.setSession(nextSession);
+    } catch (error) {
+      if (!chat.isCurrent()) return;
+      setMessage(content);
+      setChatError(error instanceof Error ? error.message : 'Не удалось отправить сообщение');
     } finally {
-      setSendingMessage(false);
+      if (chat.isCurrent()) {
+        setPendingMessage('');
+        setSendingMessage(false);
+      }
     }
   }
 
@@ -742,12 +755,16 @@ export function StudentWorkspacePage() {
             title={mentor.name}
             caseTitle={data.item.title}
             artifacts={artifactUrl ? [...selectedArtifacts, artifactUrl] : selectedArtifacts}
-            session={agentSession}
+            session={chat.session}
             message={message}
             onMessage={setMessage}
             onSend={sendAgentMessage}
             sending={sendingMessage}
             pendingMessage={pendingMessage}
+            error={chatError}
+            restoring={!chat.ready && !chat.error}
+            restoreError={chat.error}
+            onRetryRestore={() => { void chat.reload(); }}
           />
         </Grid>
       </Grid>
@@ -1151,9 +1168,9 @@ export function AgentSandboxPage() {
   const { session } = useAuth();
   const [selected, setSelected] = useState(0);
   const [text, setText] = useState('Помоги структурировать решение кейса');
-  const [agentSession, setAgentSession] = useState<AgentSession | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [pendingMessage, setPendingMessage] = useState('');
+  const [chatError, setChatError] = useState<string | null>(null);
   const [caseId, setCaseId] = useState('');
   const [artifacts, setArtifacts] = useState<string[]>(['Описание решения']);
   const [artifactLink, setArtifactLink] = useState('');
@@ -1167,32 +1184,44 @@ export function AgentSandboxPage() {
   const agent = data?.agents[selected];
   const selectedCase = data?.cases.find((item) => item.id === caseId) ?? data?.cases[0];
 
+  const chat = useAgentSession(agent?.id, selectedCase?.id, session?.user.id);
   useEffect(() => {
-    if (!agent || !selectedCase) return;
-    setAgentSession(null);
-    platformApi.agents.latestSession(agent.id, selectedCase.id).then(setAgentSession).catch(() => setAgentSession(null));
+    setChatError(null);
+    setSendingMessage(false);
+    setPendingMessage('');
   }, [agent?.id, selectedCase?.id]);
 
   async function send() {
-    if (!agent || !text.trim() || !selectedCase || sendingMessage) return;
+    if (!agent || !text.trim() || !selectedCase || sendingMessage || !chat.ready) return;
     const content = text;
     setText('');
     setPendingMessage(content);
     setSendingMessage(true);
+    setChatError(null);
     try {
-      const currentSession = agentSession ?? await post<AgentSession>('/agents/sessions', {
+      const currentSession = chat.session ?? await post<AgentSession>('/agents/sessions', {
         studentId: session?.user.id,
         caseId: selectedCase.id,
         agentId: agent.id
       });
+      if (!chat.isCurrent()) return;
+      chat.setSession(currentSession);
       const next = await platformApi.agents.sendMessage(currentSession.id, {
         content,
         caseTitle: selectedCase.title,
         artifacts: artifactLink ? [...artifacts, artifactLink] : artifacts
       });
-      setAgentSession(next);
+      if (!chat.isCurrent()) return;
+      chat.setSession(next);
+    } catch (error) {
+      if (!chat.isCurrent()) return;
+      setText(content);
+      setChatError(error instanceof Error ? error.message : 'Не удалось отправить сообщение');
     } finally {
-      setSendingMessage(false);
+      if (chat.isCurrent()) {
+        setPendingMessage('');
+        setSendingMessage(false);
+      }
     }
   }
 
@@ -1201,8 +1230,8 @@ export function AgentSandboxPage() {
   return (
     <Box>
       <PageHeader title="Песочница ИИ-наставников" subtitle="Наставники помогают думать, проверять гипотезы и структурировать работу — но не решают за вас" />
-      <Tabs value={selected} onChange={(_, value) => { setSelected(value); setAgentSession(null); }} variant="scrollable" sx={{ mb: 3 }}>
-        {data.agents.map((item) => <Tab key={item.id} label={item.name} />)}
+      <Tabs value={selected} onChange={(_, value) => { setSelected(value); }} variant="scrollable" sx={{ mb: 3 }}>
+        {data.agents.map((item) => <Tab key={item.id} label={item.name} disabled={sendingMessage} />)}
       </Tabs>
       <Grid container spacing={3}>
         <Grid item xs={12} md={4}>
@@ -1223,7 +1252,7 @@ export function AgentSandboxPage() {
                   </Stack>
                 </Box>
               )}
-              <TextField select label="Кейс" value={selectedCase.id} onChange={(event) => { setCaseId(event.target.value); setAgentSession(null); }} fullWidth sx={{ mb: 2 }} size="small">
+              <TextField select label="Кейс" disabled={sendingMessage} value={selectedCase.id} onChange={(event) => { setCaseId(event.target.value); }} fullWidth sx={{ mb: 2 }} size="small">
                 {data.cases.map((item) => <MenuItem key={item.id} value={item.id}>{item.title}</MenuItem>)}
               </TextField>
               <TextField
@@ -1252,12 +1281,16 @@ export function AgentSandboxPage() {
             title={agent.name}
             caseTitle={selectedCase.title}
             artifacts={artifactLink ? [...artifacts, artifactLink] : artifacts}
-            session={agentSession}
+            session={chat.session}
             message={text}
             onMessage={setText}
             onSend={send}
             sending={sendingMessage}
             pendingMessage={pendingMessage}
+            error={chatError}
+            restoring={!chat.ready && !chat.error}
+            restoreError={chat.error}
+            onRetryRestore={() => { void chat.reload(); }}
           />
         </Grid>
       </Grid>
@@ -2069,7 +2102,11 @@ function MentorChatPanel({
   onMessage,
   onSend,
   sending = false,
-  pendingMessage
+  pendingMessage,
+  error,
+  restoring = false,
+  restoreError,
+  onRetryRestore
 }: {
   title: string;
   caseTitle: string;
@@ -2080,6 +2117,10 @@ function MentorChatPanel({
   onSend: () => void;
   sending?: boolean;
   pendingMessage?: string;
+  error?: string | null;
+  restoring?: boolean;
+  restoreError?: string | null;
+  onRetryRestore?: () => void;
 }) {
   return (
     <Card sx={{ height: '100%' }}>
@@ -2095,6 +2136,9 @@ function MentorChatPanel({
           <Typography variant="body2" sx={{ mb: 0.5 }}><Typography component="span" fontWeight={600}>Кейс:</Typography> {caseTitle}</Typography>
           <Typography variant="body2"><Typography component="span" fontWeight={600}>Наработки:</Typography> {artifacts.length ? artifacts.join(', ') : 'Не выбраны'}</Typography>
         </Paper>
+        {restoring && <Box role="status" sx={{ mb: 2 }}><LinearProgress /><Typography variant="body2">Загружаем историю чата…</Typography></Box>}
+        {restoreError && <Alert severity="error" sx={{ mb: 2 }} action={<Button color="inherit" onClick={onRetryRestore}>Повторить загрузку</Button>}>{restoreError}</Alert>}
+        {!restoreError && error && <Alert severity="error" sx={{ mb: 2 }} role="alert">{error}</Alert>}
         <Stack spacing={2} sx={{ minHeight: 360, maxHeight: 500, overflow: 'auto', mb: 3 }}>
           {(session?.messages ?? []).map((item) => {
             const isAgent = item.role === 'AGENT';
@@ -2151,7 +2195,7 @@ function MentorChatPanel({
               </Box>
             </Stack>
           )}
-          {!session && !sending && <EmptyState title="Чат готов" description="Задайте вопрос по цели, структуре решения или проверке гипотез." />}
+          {!session && !sending && !restoring && !restoreError && <EmptyState title="Чат готов" description="Задайте вопрос по цели, структуре решения или проверке гипотез." />}
         </Stack>
         <Stack direction="row" spacing={1.5}>
           <TextField
@@ -2163,7 +2207,7 @@ function MentorChatPanel({
             size="small"
             disabled={sending}
           />
-          <Button variant="contained" onClick={onSend} disabled={sending || !message.trim()} sx={{ px: 3 }}>
+          <Button aria-label="Отправить сообщение" variant="contained" onClick={onSend} disabled={sending || restoring || Boolean(restoreError) || !message.trim()} sx={{ px: 3 }}>
             {sending ? <CircularProgress size={20} color="inherit" /> : <SendRoundedIcon />}
           </Button>
         </Stack>

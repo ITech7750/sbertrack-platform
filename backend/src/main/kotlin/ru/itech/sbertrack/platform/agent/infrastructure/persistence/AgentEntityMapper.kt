@@ -84,12 +84,13 @@ class AgentEntityMapper {
             createdAt = entity.createdAt,
         )
 
-    fun toEntity(message: AgentMessage): AgentMessageEntity =
+    fun toEntity(message: AgentMessage, sequenceNumber: Long): AgentMessageEntity =
         AgentMessageEntity(
             id = message.id,
             sessionId = message.sessionId,
             role = message.role,
             content = message.content,
             createdAt = message.createdAt,
+            sequenceNumber = sequenceNumber,
         )
 }

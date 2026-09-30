@@ -65,9 +65,33 @@ sbertrack:
     upload-dir: ${UPLOAD_DIR:./uploads}
     max-size-bytes: ${UPLOAD_MAX_SIZE_BYTES:20971520}
   agent:
-    anthropic-api-key: ${ANTHROPIC_API_KEY:}
-    anthropic-model: ${ANTHROPIC_MODEL:claude-haiku-4-5-20251001}
-    gemini-api-key: ${GEMINI_API_KEY:}
-    gemini-model: ${GEMINI_MODEL:gemini-3.6-flash}
+    active-profile: ${AGENT_ACTIVE_PROFILE:mock}
+    fallback-profile: ${AGENT_FALLBACK_PROFILE:}
+    max-input-chars: ${AGENT_MAX_INPUT_CHARS:32000}
+    max-history-messages: ${AGENT_MAX_HISTORY_MESSAGES:20}
+    profiles:
+      mock:
+        protocol: MOCK
+      anthropic:
+        protocol: ANTHROPIC
+        base-url: https://api.anthropic.com/v1
+        api-key: ${ANTHROPIC_API_KEY:}
+        model: ${ANTHROPIC_MODEL:claude-haiku-4-5-20251001}
+      gemini:
+        protocol: GEMINI
+        base-url: https://generativelanguage.googleapis.com/v1beta
+        api-key: ${GEMINI_API_KEY:}
+        model: ${GEMINI_MODEL:gemini-3.6-flash}
+      cloud:
+        protocol: OPENAI_COMPATIBLE
+        base-url: ${AGENT_CLOUD_BASE_URL:}
+        api-key: ${AGENT_CLOUD_API_KEY:}
+        model: ${AGENT_CLOUD_MODEL:}
+        token-limit-field: ${AGENT_CLOUD_TOKEN_LIMIT_FIELD:max_tokens}
+      local:
+        protocol: OPENAI_COMPATIBLE
+        base-url: ${AGENT_LOCAL_BASE_URL:http://localhost:8000/v1}
+        api-key: ${AGENT_LOCAL_API_KEY:}
+        model: ${AGENT_LOCAL_MODEL:}
   notification:
     from-email: ${SBERTRACK_NOTIFICATION_FROM_EMAIL:noreply@sbertrack.local}

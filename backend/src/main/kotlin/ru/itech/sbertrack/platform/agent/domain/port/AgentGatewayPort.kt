@@ -1,8 +1,7 @@
 package ru.itech.sbertrack.platform.agent.domain.port
 
-import ru.itech.sbertrack.platform.agent.domain.model.AgentDefinition
-import ru.itech.sbertrack.platform.agent.domain.model.AgentMessage
+import ru.itech.sbertrack.platform.agent.domain.model.AgentGenerationRequest
 
 interface AgentGatewayPort {
-    fun generateAssistantResponse(agentDefinition: AgentDefinition, history: List<AgentMessage>, userMessage: String): String
+    fun generateAssistantResponse(request: AgentGenerationRequest): String
 }

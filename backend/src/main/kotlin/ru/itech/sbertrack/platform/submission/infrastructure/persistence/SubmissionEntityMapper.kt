@@ -19,6 +19,7 @@ class SubmissionEntityMapper {
             feedbackIds = entity.feedbackIds,
             reflectionId = entity.reflectionId,
             submittedAt = entity.submittedAt,
+            contentUpdatedAt = entity.contentUpdatedAt,
         )
 
     fun toEntity(submission: Submission): SubmissionEntity =
@@ -35,5 +36,6 @@ class SubmissionEntityMapper {
             feedbackIds = submission.feedbackIds,
             reflectionId = submission.reflectionId,
             submittedAt = submission.submittedAt,
+            contentUpdatedAt = submission.contentUpdatedAt,
         )
 }

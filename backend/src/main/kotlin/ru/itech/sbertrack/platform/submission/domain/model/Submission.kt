@@ -17,6 +17,7 @@ data class Submission(
     val feedbackIds: List<UUID> = emptyList(),
     val reflectionId: UUID? = null,
     val submittedAt: Instant? = null,
+    val contentUpdatedAt: Instant = Instant.now(),
 ) {
     init {
         require(title.isNotBlank()) { "Название решения обязательно" }
@@ -26,7 +27,8 @@ data class Submission(
         require(status == SubmissionStatus.DRAFT || status == SubmissionStatus.NEEDS_IMPROVEMENT) {
             "Редактировать можно черновик или отправку на доработке"
         }
-        return copy(title = title, description = description, artifactUrl = artifactUrl, teamName = teamName)
+        return copy(title = title, description = description, artifactUrl = artifactUrl, teamName = teamName,
+            contentUpdatedAt = Instant.now())
     }
 
     fun submit(scores: Map<Competency, Int>): Submission =

@@ -6,8 +6,8 @@ Backend построен на Kotlin и Spring Boot в одном модуле `
 REST-контроллеры принимают DTO и не содержат бизнес-логики.
 Application-сервисы оркестрируют сценарии: вход, каталог, отправки, обратную связь, портфолио, витрину кандидатов, модерацию, траектории, roadmap, аналитику и ИИ-наставников.
 Domain-модели содержат инварианты и поведение: переходы статусов кейсов, отправок, roadmap-шагов и мастер-промптов.
-Infrastructure слой реализован in-memory adapters с seed-данными.
-Модуль наставников имеет порт будущей интеграции; текущая реализация детерминирована и работает локально.
+Infrastructure слой использует JPA-адаптеры и PostgreSQL; схема и начальные данные управляются Flyway.
+Модуль наставников собирает единый запрос и отправляет его через профильный шлюз: Anthropic, Gemini, совместимый HTTP API или Mock. Настройка описана в [agent-gateway.md](agent-gateway.md).
 Frontend построен на React, TypeScript и MUI, с role-based routes и демо-входом.
 Swagger UI доступен через springdoc, статический краткий контракт лежит в `contracts/openapi`.
 Docker Compose поднимает backend и production frontend через nginx.
@@ -18,11 +18,14 @@ flowchart LR
     Backend --> App[Application Services]
     App --> Domain[Domain Models]
     App --> Ports[Domain Ports]
-    Ports --> Adapters[In-memory Adapters]
-    Adapters --> Store[(Seeded In-memory Store)]
+    Ports --> Adapters[JPA Adapters]
+    Adapters --> Store[(PostgreSQL)]
     App --> Analytics[Analytics Services]
     App --> MentorPort[Mentor Gateway Port]
-    MentorPort --> MentorAdapter[Deterministic Mentor Adapter]
+    MentorPort --> MentorAdapter[Profile Gateway]
+    MentorAdapter --> Cloud[External API]
+    MentorAdapter --> Local[Self-hosted compatible API]
+    MentorAdapter --> Mock[Mock]
 ```
 
 ```mermaid
